@@ -381,7 +381,10 @@ class ScreenshotMoverService: ObservableObject {
         }
 
         pendingFiles.insert(filename)
-        NSLog("[SnapSort] Processing %@", filename)
+
+        // Capture the frontmost app NOW (before any delay) for app-based sorting
+        let capturedAppName = AppDetectionService.shared.getFrontmostAppName()
+        NSLog("[SnapSort] Processing %@ (app: %@)", filename, capturedAppName ?? "unknown")
 
         // Delay before moving:
         // - Quick mode: 1.0s (moves before preview dismisses, but after file is written)
@@ -389,7 +392,7 @@ class ScreenshotMoverService: ObservableObject {
         let delay: Double = AppSettings.shared.quickMoveEnabled ? 1.0 : 4.0
 
         processingQueue.asyncAfter(deadline: .now() + delay) { [weak self] in
-            self?.moveFile(at: url)
+            self?.moveFile(at: url, appName: capturedAppName)
             self?.pendingFiles.remove(filename)
         }
     }
@@ -415,7 +418,7 @@ class ScreenshotMoverService: ObservableObject {
         return size1 == size2 && size1 > 0
     }
 
-    private func moveFile(at sourceURL: URL) {
+    private func moveFile(at sourceURL: URL, appName: String? = nil) {
         let settings = AppSettings.shared
         let fileManager = FileManager.default
         let now = Date()
@@ -436,8 +439,8 @@ class ScreenshotMoverService: ObservableObject {
             fileDate = now
         }
 
-        // Get destination folder with date-based organization
-        guard let destinationFolder = settings.getDestinationFolder(for: fileDate) else {
+        // Get destination folder with date-based and app-based organization
+        guard let destinationFolder = settings.getDestinationFolder(for: fileDate, appName: appName) else {
             NSLog("[SnapSort] Failed to get destination folder for %@", originalFilename)
             return
         }

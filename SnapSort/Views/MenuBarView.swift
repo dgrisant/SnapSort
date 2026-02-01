@@ -66,6 +66,15 @@ struct MenuBarView: View {
             }
         }
 
+        // Phase 2: Intelligent Sorting
+        Toggle("Sort by App", isOn: $appSettings.appSortingEnabled)
+
+        if appSettings.appSortingEnabled {
+            Text("Screenshots sorted into app folders")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+
         Divider()
 
         if screenshotMover.movedCount > 0 {
