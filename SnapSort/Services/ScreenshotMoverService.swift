@@ -191,31 +191,31 @@ class ScreenshotMoverService: ObservableObject {
 
         // Skip if already being processed
         guard !pendingFiles.contains(filename) else {
-            print("[SnapSort] Skipping \(filename) - already being processed")
+            NSLog("[SnapSort] Skipping %@ - already being processed", filename)
             return
         }
 
         // Check if file matches our prefixes
         guard AppSettings.shared.matchesPrefix(filename) else {
-            print("[SnapSort] Skipping \(filename) - doesn't match prefixes")
+            NSLog("[SnapSort] Skipping %@ - doesn't match prefixes", filename)
             return
         }
 
         // Check if file exists
         guard FileManager.default.fileExists(atPath: url.path) else {
-            print("[SnapSort] Skipping \(filename) - file doesn't exist")
+            NSLog("[SnapSort] Skipping %@ - file doesn't exist", filename)
             return
         }
 
         // Wait for file to be stable (not being written)
         guard isFileStable(at: url) else {
             if retryCount < maxRetries {
-                print("[SnapSort] File \(filename) not stable yet, retry \(retryCount + 1)/\(maxRetries)")
+                NSLog("[SnapSort] File %@ not stable yet, retry %d/%d", filename, retryCount + 1, maxRetries)
                 processingQueue.asyncAfter(deadline: .now() + 0.5) { [weak self] in
                     self?.processFile(at: url, retryCount: retryCount + 1)
                 }
             } else {
-                print("[SnapSort] File \(filename) never became stable, giving up")
+                NSLog("[SnapSort] File %@ never became stable, giving up", filename)
             }
             return
         }
@@ -223,18 +223,18 @@ class ScreenshotMoverService: ObservableObject {
         // Validate it's an image
         guard FileValidator.isValidImage(at: url) else {
             if retryCount < maxRetries {
-                print("[SnapSort] File \(filename) failed validation, retry \(retryCount + 1)/\(maxRetries)")
+                NSLog("[SnapSort] File %@ failed validation, retry %d/%d", filename, retryCount + 1, maxRetries)
                 processingQueue.asyncAfter(deadline: .now() + 0.5) { [weak self] in
                     self?.processFile(at: url, retryCount: retryCount + 1)
                 }
             } else {
-                print("[SnapSort] File \(filename) failed validation after \(maxRetries) retries")
+                NSLog("[SnapSort] File %@ failed validation after %d retries", filename, maxRetries)
             }
             return
         }
 
         pendingFiles.insert(filename)
-        print("[SnapSort] Processing \(filename)")
+        NSLog("[SnapSort] Processing %@", filename)
 
         // Delay before moving:
         // - Quick mode: 1.0s (moves before preview dismisses, but after file is written)
@@ -276,7 +276,7 @@ class ScreenshotMoverService: ObservableObject {
 
         // Verify source file still exists
         guard fileManager.fileExists(atPath: sourceURL.path) else {
-            print("[SnapSort] Source file no longer exists: \(originalFilename)")
+            NSLog("[SnapSort] Source file no longer exists: %@", originalFilename)
             return
         }
 
@@ -291,7 +291,7 @@ class ScreenshotMoverService: ObservableObject {
 
         // Get destination folder with date-based organization
         guard let destinationFolder = settings.getDestinationFolder(for: fileDate) else {
-            print("[SnapSort] Failed to get destination folder for \(originalFilename)")
+            NSLog("[SnapSort] Failed to get destination folder for %@", originalFilename)
             return
         }
 
@@ -312,7 +312,7 @@ class ScreenshotMoverService: ObservableObject {
 
         do {
             try fileManager.moveItem(at: sourceURL, to: destinationURL)
-            print("[SnapSort] Moved: \(originalFilename) → \(destinationFolder.lastPathComponent)/\(newFilename)")
+            NSLog("[SnapSort] SUCCESS Moved: %@ → %@/%@", originalFilename, destinationFolder.lastPathComponent, newFilename)
 
             DispatchQueue.main.async { [weak self] in
                 self?.movedCount += 1
@@ -330,7 +330,7 @@ class ScreenshotMoverService: ObservableObject {
                 }
             }
         } catch {
-            print("[SnapSort] Failed to move \(originalFilename): \(error.localizedDescription)")
+            NSLog("[SnapSort] FAILED to move %@: %@", originalFilename, error.localizedDescription)
         }
     }
 }
@@ -338,6 +338,7 @@ class ScreenshotMoverService: ObservableObject {
 // MARK: - FileWatcherDelegate
 extension ScreenshotMoverService: FileWatcherDelegate {
     func fileWatcher(_ watcher: FileWatcherService, didDetectNewFile url: URL) {
+        NSLog("[SnapSort] FSEvent detected file: %@", url.lastPathComponent)
         processingQueue.async { [weak self] in
             self?.processFile(at: url)
         }

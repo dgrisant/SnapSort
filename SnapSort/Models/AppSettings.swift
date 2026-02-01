@@ -242,9 +242,9 @@ class AppSettings: ObservableObject {
     }
 
     private func setupDefaultDestination() {
-        guard let picturesURL = FileManager.default.urls(for: .picturesDirectory, in: .userDomainMask).first else { return }
+        guard let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
 
-        let screenshotsURL = picturesURL.appendingPathComponent("Screenshots")
+        let screenshotsURL = documentsURL.appendingPathComponent("Screenshots")
 
         // Create the folder if it doesn't exist
         if !FileManager.default.fileExists(atPath: screenshotsURL.path) {
