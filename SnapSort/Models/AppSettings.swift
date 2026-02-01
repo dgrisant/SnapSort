@@ -94,6 +94,10 @@ class AppSettings: ObservableObject {
         static let namingFormat = "namingFormat"
         static let customPrefix = "customPrefix"
         static let sequentialCounter = "sequentialCounter"
+        // Phase 2: Intelligent Sorting
+        static let appSortingEnabled = "appSortingEnabled"
+        static let appBlacklist = "appBlacklist"
+        static let typeSortingEnabled = "typeSortingEnabled"
     }
 
     // MARK: - Published Properties
@@ -188,6 +192,31 @@ class AppSettings: ObservableObject {
         }
     }
 
+    // MARK: - Phase 2: Intelligent Sorting Settings
+
+    @Published var appSortingEnabled: Bool {
+        didSet {
+            defaults.set(appSortingEnabled, forKey: Keys.appSortingEnabled)
+        }
+    }
+
+    @Published var appBlacklist: [String] {
+        didSet {
+            defaults.set(appBlacklist, forKey: Keys.appBlacklist)
+        }
+    }
+
+    @Published var typeSortingEnabled: Bool {
+        didSet {
+            defaults.set(typeSortingEnabled, forKey: Keys.typeSortingEnabled)
+        }
+    }
+
+    /// Checks if an app should be excluded from app-based sorting
+    func isAppBlacklisted(_ appName: String) -> Bool {
+        return appBlacklist.contains { $0.lowercased() == appName.lowercased() }
+    }
+
     /// Controls the macOS screenshot thumbnail preview
     private func setScreenshotThumbnailEnabled(_ enabled: Bool) {
         let task = Process()
@@ -229,6 +258,11 @@ class AppSettings: ObservableObject {
 
         self.customPrefix = defaults.string(forKey: Keys.customPrefix) ?? "Screenshot"
         self.sequentialCounter = defaults.integer(forKey: Keys.sequentialCounter)
+
+        // Phase 2: Intelligent Sorting settings
+        self.appSortingEnabled = defaults.bool(forKey: Keys.appSortingEnabled) // Default false
+        self.appBlacklist = defaults.stringArray(forKey: Keys.appBlacklist) ?? ["Finder", "SnapSort"]
+        self.typeSortingEnabled = defaults.bool(forKey: Keys.typeSortingEnabled) // Default false
 
         // Apply screenshot thumbnail setting on startup
         if quickMoveEnabled {
@@ -370,16 +404,30 @@ class AppSettings: ObservableObject {
         }
     }
 
-    /// Gets the full destination path including date-based subfolders
-    func getDestinationFolder(for date: Date = Date()) -> URL? {
+    /// Gets the full destination path including date-based, app-based, and type-based subfolders
+    func getDestinationFolder(for date: Date = Date(), appName: String? = nil, screenshotType: ScreenshotType? = nil) -> URL? {
         guard let baseURL = destinationFolderURL else { return nil }
 
-        let subpath = folderOrganization.subpath(for: date)
-        if subpath.isEmpty {
-            return baseURL
+        var fullPath = baseURL
+
+        // Add app subfolder if app sorting is enabled
+        if appSortingEnabled, let app = appName, !app.isEmpty, !isAppBlacklisted(app) {
+            let sanitizedApp = AppDetectionService.shared.sanitizeForFolderName(app)
+            if !sanitizedApp.isEmpty {
+                fullPath = fullPath.appendingPathComponent(sanitizedApp)
+            }
         }
 
-        let fullPath = baseURL.appendingPathComponent(subpath)
+        // Add type subfolder if type sorting is enabled
+        if typeSortingEnabled, let type = screenshotType, type != .unknown {
+            fullPath = fullPath.appendingPathComponent(type.folderName)
+        }
+
+        // Add date-based subfolder
+        let subpath = folderOrganization.subpath(for: date)
+        if !subpath.isEmpty {
+            fullPath = fullPath.appendingPathComponent(subpath)
+        }
 
         // Create the folder if it doesn't exist
         if !FileManager.default.fileExists(atPath: fullPath.path) {
