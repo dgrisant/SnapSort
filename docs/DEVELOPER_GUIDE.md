@@ -36,7 +36,8 @@ SnapSort is a native macOS menu bar application built with SwiftUI. It uses a se
 │  │              AppSettings (ObservableObject)      │    │
 │  │         - UserDefaults persistence               │    │
 │  │         - Security-scoped bookmarks              │    │
-│  │         - System preference integration          │    │
+│  │         - macOS screenshot configuration         │    │
+│  │         - Reset to defaults on quit              │    │
 │  └─────────────────────────────────────────────────┘    │
 │                          │                               │
 ├──────────────────────────┼───────────────────────────────┤
@@ -49,9 +50,19 @@ SnapSort is a native macOS menu bar application built with SwiftUI. It uses a se
 │  │  │(FSEvents)     │  │(Move Logic)             │ │    │
 │  │  └───────────────┘  └─────────────────────────┘ │    │
 │  │  ┌───────────────┐  ┌─────────────────────────┐ │    │
-│  │  │Notification   │  │LaunchAtLogin            │ │    │
+│  │  │AppDetection   │  │ScreenshotType           │ │    │
 │  │  │Service        │  │Service                  │ │    │
+│  │  │(Frontmost App)│  │(Full/Window/Selection)  │ │    │
 │  │  └───────────────┘  └─────────────────────────┘ │    │
+│  │  ┌───────────────┐  ┌─────────────────────────┐ │    │
+│  │  │ImageMetadata  │  │Notification             │ │    │
+│  │  │Service        │  │Service                  │ │    │
+│  │  │(PNG Metadata) │  │(User Alerts)            │ │    │
+│  │  └───────────────┘  └─────────────────────────┘ │    │
+│  │  ┌───────────────┐                              │    │
+│  │  │LaunchAtLogin  │                              │    │
+│  │  │Service        │                              │    │
+│  │  └───────────────┘                              │    │
 │  └─────────────────────────────────────────────────┘    │
 │                                                          │
 ├──────────────────────────────────────────────────────────┤
@@ -80,13 +91,16 @@ SnapSort/
 ├── SnapSort/
 │   ├── App/
 │   │   ├── SnapSortApp.swift    # @main entry point, MenuBarExtra
-│   │   └── AppDelegate.swift    # NSApplicationDelegate, lifecycle
+│   │   └── AppDelegate.swift    # NSApplicationDelegate, lifecycle, reset on quit
 │   ├── Models/
-│   │   ├── AppSettings.swift    # Settings, UserDefaults, bookmarks
+│   │   ├── AppSettings.swift    # Settings, UserDefaults, bookmarks, macOS config
 │   │   └── MovedFile.swift      # File tracking model
 │   ├── Services/
+│   │   ├── AppDetectionService.swift     # Frontmost app detection (Phase 2)
 │   │   ├── FileWatcherService.swift      # FSEvents directory monitoring
+│   │   ├── ImageMetadataService.swift    # PNG metadata read/write (Phase 2.3)
 │   │   ├── ScreenshotMoverService.swift  # File detection & moving
+│   │   ├── ScreenshotTypeService.swift   # Screenshot type detection (Phase 2)
 │   │   ├── NotificationService.swift     # User notifications
 │   │   └── LaunchAtLoginService.swift    # SMAppService wrapper
 │   ├── Views/
@@ -208,9 +222,82 @@ class ScreenshotMoverService: ObservableObject, FileWatcherDelegate {
 1. File detected by `FileWatcherService`
 2. Check if filename matches configured prefixes
 3. Validate file is an image (magic bytes)
-4. Wait for delay (0.5s quick mode, 4s normal mode)
-5. Move to destination with conflict resolution
-6. Send notification if enabled
+4. Capture frontmost app name (`AppDetectionService`)
+5. Wait for delay (1s quick mode, 4s normal mode)
+6. Detect screenshot type (`ScreenshotTypeService`)
+7. Move to destination with date/app/type organization
+8. Write metadata to PNG (`ImageMetadataService`)
+9. Send notification if enabled
+
+### AppDetectionService.swift (Phase 2)
+
+Detects the frontmost application for app-based sorting.
+
+```swift
+class AppDetectionService {
+    static let shared = AppDetectionService()
+
+    func getFrontmostAppName() -> String?
+    func sanitizeForFolderName(_ appName: String) -> String
+}
+```
+
+**Key Points:**
+- Uses `NSWorkspace.shared.frontmostApplication`
+- Sanitizes app names for folder creation (removes invalid characters)
+- Called immediately when screenshot detected (before delay)
+
+### ScreenshotTypeService.swift (Phase 2)
+
+Detects screenshot type based on dimensions and image properties.
+
+```swift
+enum ScreenshotType: String, CaseIterable {
+    case fullScreen = "Full Screen"
+    case selection = "Selection"
+    case window = "Window"
+    case recording = "Recording"
+    case unknown = "Unknown"
+}
+
+class ScreenshotTypeService {
+    static let shared = ScreenshotTypeService()
+
+    func detectType(at url: URL) -> ScreenshotType
+}
+```
+
+**Detection Logic:**
+- **Recording**: Filename contains "Screen Recording" or `.mov` extension
+- **Full Screen**: Image dimensions match any connected screen
+- **Window**: Image has alpha channel (shadow) or typical window dimensions
+- **Selection**: Default for partial captures
+
+### ImageMetadataService.swift (Phase 2.3)
+
+Reads and writes SnapSort metadata to PNG files using PNG text chunks.
+
+```swift
+struct ScreenshotMetadata {
+    let appName: String?
+    let screenshotType: String?
+    let captureDate: Date
+}
+
+class ImageMetadataService {
+    static let shared = ImageMetadataService()
+
+    func writeMetadata(_ metadata: ScreenshotMetadata, to fileURL: URL) -> Bool
+    func readMetadata(from fileURL: URL) -> ScreenshotMetadata?
+    func hasSnapSortMetadata(at fileURL: URL) -> Bool
+}
+```
+
+**Key Points:**
+- Uses `CGImageDestinationCopyImageSource` (no image recompression)
+- Stores metadata in PNG text chunks with `SnapSort:` prefix
+- Enables reorganization when sorting settings toggle off/on
+- Metadata keys: `SnapSort:AppName`, `SnapSort:ScreenshotType`, `SnapSort:CaptureDate`, `SnapSort:MetadataVersion`
 
 ---
 
@@ -304,8 +391,34 @@ For App Store (sandboxed):
 | `filePrefixes` | [String] | See below | Filename prefixes to match |
 | `showNotifications` | Bool | `true` | Show move notifications |
 | `launchAtLogin` | Bool | `false` | Start at login |
+| `folderOrganization` | String | `"flat"` | Date folder structure (Phase 1) |
+| `namingFormat` | String | `"original"` | File renaming format (Phase 1) |
+| `customPrefix` | String | `"Screenshot"` | Custom prefix for renaming |
+| `sequentialCounter` | Int | `0` | Counter for sequential naming |
+| `appSortingEnabled` | Bool | `false` | Sort by app (Phase 2) |
+| `appBlacklist` | [String] | See below | Apps to exclude from sorting |
+| `typeSortingEnabled` | Bool | `false` | Sort by type (Phase 2) |
 
 Default prefixes: `["Screenshot", "Screen Shot", "Screen Recording", "mac_"]`
+Default app blacklist: `["Finder", "SnapSort"]`
+
+### Folder Organization Options (Phase 1)
+
+| Value | Example Path |
+|-------|--------------|
+| `flat` | `Screenshots/image.png` |
+| `yearMonthDay` | `Screenshots/2026/02/01/image.png` |
+| `yearMonth` | `Screenshots/2026/02/image.png` |
+| `yearMonthDayFlat` | `Screenshots/2026-02-01/image.png` |
+
+### Naming Format Options (Phase 1)
+
+| Value | Example Filename |
+|-------|------------------|
+| `original` | `Screenshot 2026-02-01 at 9.45.32 AM.png` |
+| `compact` | `2026-02-01_094532.png` |
+| `sequential` | `Screenshot_001.png` |
+| `custom` | `MyPrefix_2026-02-01_094532.png` |
 
 ---
 
@@ -392,6 +505,26 @@ gh pr create --base dev --title "Feature: Your Feature" --body "Description"
 
 ## Testing
 
+### macOS Settings Management
+
+SnapSort modifies macOS screenshot settings on startup and resets them on quit:
+
+**On App Start:**
+- Sets `com.apple.screencapture location` to Documents/Screenshots
+- Optionally disables `show-thumbnail` (if Instant Move enabled)
+- Processes any screenshots on Desktop taken while app was closed
+
+**On App Quit:**
+- Resets `com.apple.screencapture location` to default (Desktop)
+- Resets `show-thumbnail` to default (enabled)
+- Runs `killall SystemUIServer` to apply changes
+
+This ensures macOS behaves normally when SnapSort isn't running.
+
+---
+
+## Testing
+
 ### Manual Test Cases
 
 | Test | Steps | Expected |
@@ -400,7 +533,12 @@ gh pr create --base dev --title "Feature: Your Feature" --body "Description"
 | Instant mode | Enable Instant Move, take screenshot | No thumbnail, immediate move |
 | Disable | Toggle off, take screenshot | File stays on Desktop |
 | Notification | Enable notifications, take screenshot | Notification appears |
-| Quit | Click Quit | App terminates |
+| Quit | Click Quit | App terminates, settings reset |
+| Startup pickup | Quit app, take screenshot, restart app | Desktop screenshot moves |
+| App sorting | Enable Sort by App, screenshot in Safari | Goes to Safari/ subfolder |
+| Type sorting | Enable Sort by Type, take window screenshot | Goes to Windows/ subfolder |
+| Settings toggle | Enable Sort by App, then disable | Files reorganize out of app folders |
+| Metadata persistence | Toggle sorting off then on | Files return to correct folders |
 
 ### Edge Cases to Test
 
@@ -410,6 +548,10 @@ gh pr create --base dev --title "Feature: Your Feature" --body "Description"
 - Screenshot during app startup
 - Disk full scenario
 - Permission denied scenario
+- Force quit app (settings may not reset)
+- Files without metadata during reorganization
+- Mix of old files (no metadata) and new files (with metadata)
+- PNG files from external sources (no SnapSort metadata)
 
 ### Performance Testing
 
