@@ -1,6 +1,80 @@
 import Foundation
 import Combine
 
+// MARK: - Organization Enums
+
+enum FolderOrganization: String, CaseIterable, Identifiable {
+    case flat = "flat"                      // No subfolders (current behavior)
+    case yearMonthDay = "yearMonthDay"      // 2026/02/01/
+    case yearMonth = "yearMonth"            // 2026/02/
+    case yearMonthDayFlat = "yearMonthDayFlat"  // 2026-02-01/
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .flat: return "Flat (no subfolders)"
+        case .yearMonthDay: return "Year / Month / Day"
+        case .yearMonth: return "Year / Month"
+        case .yearMonthDayFlat: return "Year-Month-Day"
+        }
+    }
+
+    var example: String {
+        switch self {
+        case .flat: return "Screenshots/image.png"
+        case .yearMonthDay: return "Screenshots/2026/02/01/image.png"
+        case .yearMonth: return "Screenshots/2026/02/image.png"
+        case .yearMonthDayFlat: return "Screenshots/2026-02-01/image.png"
+        }
+    }
+
+    func subpath(for date: Date) -> String {
+        let calendar = Calendar.current
+        let year = calendar.component(.year, from: date)
+        let month = calendar.component(.month, from: date)
+        let day = calendar.component(.day, from: date)
+
+        switch self {
+        case .flat:
+            return ""
+        case .yearMonthDay:
+            return String(format: "%04d/%02d/%02d", year, month, day)
+        case .yearMonth:
+            return String(format: "%04d/%02d", year, month)
+        case .yearMonthDayFlat:
+            return String(format: "%04d-%02d-%02d", year, month, day)
+        }
+    }
+}
+
+enum NamingFormat: String, CaseIterable, Identifiable {
+    case original = "original"              // Keep original macOS name
+    case compact = "compact"                // 2026-02-01_094532.png
+    case sequential = "sequential"          // Screenshot_001.png
+    case custom = "custom"                  // {prefix}_{date}_{time}.png
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .original: return "Original (macOS default)"
+        case .compact: return "Compact (date_time)"
+        case .sequential: return "Sequential (numbered)"
+        case .custom: return "Custom prefix"
+        }
+    }
+
+    var example: String {
+        switch self {
+        case .original: return "Screenshot 2026-02-01 at 9.45.32 AM.png"
+        case .compact: return "2026-02-01_094532.png"
+        case .sequential: return "Screenshot_001.png"
+        case .custom: return "MyPrefix_2026-02-01_094532.png"
+        }
+    }
+}
+
 class AppSettings: ObservableObject {
     static let shared = AppSettings()
 
@@ -15,6 +89,11 @@ class AppSettings: ObservableObject {
         static let showNotifications = "showNotifications"
         static let launchAtLogin = "launchAtLogin"
         static let quickMoveEnabled = "quickMoveEnabled"
+        // Phase 1: Organization
+        static let folderOrganization = "folderOrganization"
+        static let namingFormat = "namingFormat"
+        static let customPrefix = "customPrefix"
+        static let sequentialCounter = "sequentialCounter"
     }
 
     // MARK: - Published Properties
@@ -76,6 +155,32 @@ class AppSettings: ObservableObject {
         }
     }
 
+    // MARK: - Phase 1: Organization Settings
+
+    @Published var folderOrganization: FolderOrganization {
+        didSet {
+            defaults.set(folderOrganization.rawValue, forKey: Keys.folderOrganization)
+        }
+    }
+
+    @Published var namingFormat: NamingFormat {
+        didSet {
+            defaults.set(namingFormat.rawValue, forKey: Keys.namingFormat)
+        }
+    }
+
+    @Published var customPrefix: String {
+        didSet {
+            defaults.set(customPrefix, forKey: Keys.customPrefix)
+        }
+    }
+
+    @Published var sequentialCounter: Int {
+        didSet {
+            defaults.set(sequentialCounter, forKey: Keys.sequentialCounter)
+        }
+    }
+
     /// Controls the macOS screenshot thumbnail preview
     private func setScreenshotThumbnailEnabled(_ enabled: Bool) {
         let task = Process()
@@ -92,6 +197,30 @@ class AppSettings: ObservableObject {
         self.showNotifications = defaults.object(forKey: Keys.showNotifications) as? Bool ?? true
         self.launchAtLogin = defaults.bool(forKey: Keys.launchAtLogin)
         self.quickMoveEnabled = defaults.bool(forKey: Keys.quickMoveEnabled) // Default false
+
+        // Phase 1: Organization settings
+        let orgRaw = defaults.string(forKey: Keys.folderOrganization)
+        NSLog("[SnapSort] Raw folderOrganization from defaults: %@", orgRaw ?? "nil")
+        if let orgRaw = orgRaw, let org = FolderOrganization(rawValue: orgRaw) {
+            self.folderOrganization = org
+            NSLog("[SnapSort] Loaded folderOrganization: %@", org.rawValue)
+        } else {
+            self.folderOrganization = .flat
+            NSLog("[SnapSort] Using default folderOrganization: flat")
+        }
+
+        let nameRaw = defaults.string(forKey: Keys.namingFormat)
+        NSLog("[SnapSort] Raw namingFormat from defaults: %@", nameRaw ?? "nil")
+        if let nameRaw = nameRaw, let name = NamingFormat(rawValue: nameRaw) {
+            self.namingFormat = name
+            NSLog("[SnapSort] Loaded namingFormat: %@", name.rawValue)
+        } else {
+            self.namingFormat = .original
+            NSLog("[SnapSort] Using default namingFormat: original")
+        }
+
+        self.customPrefix = defaults.string(forKey: Keys.customPrefix) ?? "Screenshot"
+        self.sequentialCounter = defaults.integer(forKey: Keys.sequentialCounter)
 
         // Apply screenshot thumbnail setting on startup
         if quickMoveEnabled {
@@ -189,18 +318,78 @@ class AppSettings: ObservableObject {
         return filePrefixes.contains { filename.hasPrefix($0) }
     }
 
+    // MARK: - Filename Generation
+
+    /// Generates a new filename based on current naming format settings
+    func generateFilename(for originalName: String, date: Date = Date()) -> String {
+        let fileExtension = (originalName as NSString).pathExtension
+        print("[SnapSort] generateFilename called - namingFormat: \(namingFormat.rawValue)")
+
+        switch namingFormat {
+        case .original:
+            return originalName
+
+        case .compact:
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd_HHmmss"
+            return "\(formatter.string(from: date)).\(fileExtension)"
+
+        case .sequential:
+            sequentialCounter += 1
+            return String(format: "%@_%03d.%@", customPrefix, sequentialCounter, fileExtension)
+
+        case .custom:
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd_HHmmss"
+            return "\(customPrefix)_\(formatter.string(from: date)).\(fileExtension)"
+        }
+    }
+
+    /// Gets the full destination path including date-based subfolders
+    func getDestinationFolder(for date: Date = Date()) -> URL? {
+        guard let baseURL = destinationFolderURL else { return nil }
+
+        let subpath = folderOrganization.subpath(for: date)
+        if subpath.isEmpty {
+            return baseURL
+        }
+
+        let fullPath = baseURL.appendingPathComponent(subpath)
+
+        // Create the folder if it doesn't exist
+        if !FileManager.default.fileExists(atPath: fullPath.path) {
+            try? FileManager.default.createDirectory(at: fullPath, withIntermediateDirectories: true)
+        }
+
+        return fullPath
+    }
+
     // MARK: - Screenshot Location Detection
     /// Gets the user's configured screenshot save location from macOS preferences
     static func getScreenshotLocation() -> URL {
+        let fileManager = FileManager.default
+
         // Try to read from macOS screencapture preferences
         if let locationString = UserDefaults(suiteName: "com.apple.screencapture")?.string(forKey: "location") {
             let url = URL(fileURLWithPath: locationString)
-            if FileManager.default.fileExists(atPath: url.path) {
+            if fileManager.fileExists(atPath: url.path) {
                 return url
             }
         }
 
+        // Check for ~/Desktop/Screenshots (common alternative location)
+        if let desktop = fileManager.urls(for: .desktopDirectory, in: .userDomainMask).first {
+            let desktopScreenshots = desktop.appendingPathComponent("Screenshots")
+            if fileManager.fileExists(atPath: desktopScreenshots.path) {
+                // Check if this folder has recent screenshots
+                if let contents = try? fileManager.contentsOfDirectory(atPath: desktopScreenshots.path),
+                   contents.contains(where: { $0.hasPrefix("Screenshot") }) {
+                    return desktopScreenshots
+                }
+            }
+        }
+
         // Fall back to Desktop
-        return FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first!
+        return fileManager.urls(for: .desktopDirectory, in: .userDomainMask).first!
     }
 }

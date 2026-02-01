@@ -58,6 +58,103 @@ class ScreenshotMoverService: ObservableObject {
         }
     }
 
+    // MARK: - Reorganize Existing Files
+
+    /// Reorganizes existing screenshots in the destination folder according to current settings
+    /// Returns the number of files reorganized
+    func reorganizeExistingFiles(completion: @escaping (Int) -> Void) {
+        let settings = AppSettings.shared
+        guard let destinationURL = settings.destinationFolderURL else {
+            completion(0)
+            return
+        }
+
+        processingQueue.async {
+            let fileManager = FileManager.default
+            var reorganizedCount = 0
+
+            // Get all files in the root of destination folder (not in subfolders)
+            guard let contents = try? fileManager.contentsOfDirectory(
+                at: destinationURL,
+                includingPropertiesForKeys: [.isRegularFileKey, .creationDateKey, .isDirectoryKey],
+                options: [.skipsHiddenFiles]
+            ) else {
+                DispatchQueue.main.async { completion(0) }
+                return
+            }
+
+            for fileURL in contents {
+                // Skip directories
+                if let resourceValues = try? fileURL.resourceValues(forKeys: [.isDirectoryKey]),
+                   resourceValues.isDirectory == true {
+                    continue
+                }
+
+                // Check if file matches our prefixes
+                let filename = fileURL.lastPathComponent
+                guard settings.matchesPrefix(filename) else { continue }
+
+                // Validate it's an image
+                guard FileValidator.isValidImage(at: fileURL) else { continue }
+
+                // Get file creation date
+                let fileDate: Date
+                if let attributes = try? fileManager.attributesOfItem(atPath: fileURL.path),
+                   let creationDate = attributes[.creationDate] as? Date {
+                    fileDate = creationDate
+                } else {
+                    fileDate = Date()
+                }
+
+                // Get proper destination folder
+                guard let properFolder = settings.getDestinationFolder(for: fileDate) else { continue }
+
+                // Skip if already in the correct folder
+                if fileURL.deletingLastPathComponent().path == properFolder.path {
+                    continue
+                }
+
+                // Generate new filename
+                var newFilename = settings.generateFilename(for: filename, date: fileDate)
+                var newDestination = properFolder.appendingPathComponent(newFilename)
+
+                // Handle conflicts
+                var counter = 1
+                let nameWithoutExtension = (newFilename as NSString).deletingPathExtension
+                let fileExtension = (newFilename as NSString).pathExtension
+
+                while fileManager.fileExists(atPath: newDestination.path) {
+                    newFilename = "\(nameWithoutExtension)_\(counter).\(fileExtension)"
+                    newDestination = properFolder.appendingPathComponent(newFilename)
+                    counter += 1
+                }
+
+                // Move the file
+                do {
+                    try fileManager.moveItem(at: fileURL, to: newDestination)
+                    reorganizedCount += 1
+                    print("[SnapSort] Reorganized: \(filename) → \(properFolder.lastPathComponent)/\(newFilename)")
+                } catch {
+                    print("[SnapSort] Failed to reorganize \(filename): \(error)")
+                }
+            }
+
+            DispatchQueue.main.async {
+                if reorganizedCount > 0 {
+                    self.movedCount += reorganizedCount
+
+                    if settings.showNotifications {
+                        NotificationService.shared.sendNotification(
+                            title: "Screenshots Reorganized",
+                            body: "\(reorganizedCount) file\(reorganizedCount == 1 ? "" : "s") organized into date folders"
+                        )
+                    }
+                }
+                completion(reorganizedCount)
+            }
+        }
+    }
+
     private func processExistingFiles() {
         guard let watchURL = AppSettings.shared.watchFolderURL else { return }
 
@@ -101,20 +198,36 @@ class ScreenshotMoverService: ObservableObject {
     }
 
     private func moveFile(at sourceURL: URL) {
-        guard let destinationFolder = AppSettings.shared.destinationFolderURL else { return }
+        let settings = AppSettings.shared
+        let fileManager = FileManager.default
+        let now = Date()
 
-        let filename = sourceURL.lastPathComponent
-        var destinationURL = destinationFolder.appendingPathComponent(filename)
+        // Get file creation date for organization (or use current date)
+        let fileDate: Date
+        if let attributes = try? fileManager.attributesOfItem(atPath: sourceURL.path),
+           let creationDate = attributes[.creationDate] as? Date {
+            fileDate = creationDate
+        } else {
+            fileDate = now
+        }
+
+        // Get destination folder with date-based organization
+        guard let destinationFolder = settings.getDestinationFolder(for: fileDate) else { return }
+
+        let originalFilename = sourceURL.lastPathComponent
+
+        // Generate new filename based on naming format
+        var newFilename = settings.generateFilename(for: originalFilename, date: fileDate)
+        var destinationURL = destinationFolder.appendingPathComponent(newFilename)
 
         // Handle filename conflicts
-        let fileManager = FileManager.default
         var counter = 1
-        let nameWithoutExtension = sourceURL.deletingPathExtension().lastPathComponent
-        let fileExtension = sourceURL.pathExtension
+        let nameWithoutExtension = (newFilename as NSString).deletingPathExtension
+        let fileExtension = (newFilename as NSString).pathExtension
 
         while fileManager.fileExists(atPath: destinationURL.path) {
-            let newName = "\(nameWithoutExtension) (\(counter)).\(fileExtension)"
-            destinationURL = destinationFolder.appendingPathComponent(newName)
+            newFilename = "\(nameWithoutExtension)_\(counter).\(fileExtension)"
+            destinationURL = destinationFolder.appendingPathComponent(newFilename)
             counter += 1
         }
 
@@ -125,14 +238,14 @@ class ScreenshotMoverService: ObservableObject {
                 self?.movedCount += 1
 
                 // Track the moved file
-                let movedFile = MovedFile(originalName: filename, destinationPath: destinationURL.path)
+                let movedFile = MovedFile(originalName: originalFilename, destinationPath: destinationURL.path)
                 RecentFilesManager.shared.addFile(movedFile)
 
                 // Send notification if enabled
-                if AppSettings.shared.showNotifications {
+                if settings.showNotifications {
                     NotificationService.shared.sendNotification(
-                        title: "Screenshot Moved",
-                        body: "Moved \(filename) to \(destinationFolder.lastPathComponent)"
+                        title: "Screenshot Organized",
+                        body: "\(originalFilename) → \(newFilename)"
                     )
                 }
             }
