@@ -43,3 +43,6 @@ playground.xcworkspace
 *.ipa
 *.dSYM.zip
 *.dSYM
+
+# Claude development notes (local only)
+CLAUDE_FINDINGS.md
