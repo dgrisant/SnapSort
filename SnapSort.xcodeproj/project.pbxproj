@@ -1,0 +1,412 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A1000001236A0001 /* SnapSortApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001236A0000 /* SnapSortApp.swift */; };
+		A1000002236A0002 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002236A0001 /* AppDelegate.swift */; };
+		A1000003236A0003 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000003236A0002 /* AppSettings.swift */; };
+		A1000004236A0004 /* MovedFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000004236A0003 /* MovedFile.swift */; };
+		A1000005236A0005 /* FileWatcherService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000005236A0004 /* FileWatcherService.swift */; };
+		A1000006236A0006 /* ScreenshotMoverService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000006236A0005 /* ScreenshotMoverService.swift */; };
+		A1000007236A0007 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000007236A0006 /* NotificationService.swift */; };
+		A1000008236A0008 /* LaunchAtLoginService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000008236A0007 /* LaunchAtLoginService.swift */; };
+		A1000009236A0009 /* FileValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000009236A0008 /* FileValidator.swift */; };
+		A100000A236A000A /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000A236A0009 /* MenuBarView.swift */; };
+		A100000B236A000B /* PreferencesWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000B236A000A /* PreferencesWindow.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A1000000236A0000 /* SnapSort.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SnapSort.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1000001236A0000 /* SnapSortApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapSortApp.swift; sourceTree = "<group>"; };
+		A1000002236A0001 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		A1000003236A0002 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		A1000004236A0003 /* MovedFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovedFile.swift; sourceTree = "<group>"; };
+		A1000005236A0004 /* FileWatcherService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileWatcherService.swift; sourceTree = "<group>"; };
+		A1000006236A0005 /* ScreenshotMoverService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotMoverService.swift; sourceTree = "<group>"; };
+		A1000007236A0006 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		A1000008236A0007 /* LaunchAtLoginService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginService.swift; sourceTree = "<group>"; };
+		A1000009236A0008 /* FileValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileValidator.swift; sourceTree = "<group>"; };
+		A100000A236A0009 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
+		A100000B236A000A /* PreferencesWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesWindow.swift; sourceTree = "<group>"; };
+		A100000C236A000B /* SnapSort.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SnapSort.entitlements; sourceTree = "<group>"; };
+		A100000D236A000C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A10000F0236A0000 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A1000100236A0000 = {
+			isa = PBXGroup;
+			children = (
+				A1000101236A0000 /* SnapSort */,
+				A1000102236A0000 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A1000101236A0000 /* SnapSort */ = {
+			isa = PBXGroup;
+			children = (
+				A1000103236A0000 /* App */,
+				A1000104236A0000 /* Models */,
+				A1000105236A0000 /* Services */,
+				A1000106236A0000 /* Views */,
+				A1000107236A0000 /* Utilities */,
+				A100000C236A000B /* SnapSort.entitlements */,
+				A100000D236A000C /* Info.plist */,
+			);
+			path = SnapSort;
+			sourceTree = "<group>";
+		};
+		A1000102236A0000 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000236A0000 /* SnapSort.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A1000103236A0000 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001236A0000 /* SnapSortApp.swift */,
+				A1000002236A0001 /* AppDelegate.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		A1000104236A0000 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A1000003236A0002 /* AppSettings.swift */,
+				A1000004236A0003 /* MovedFile.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		A1000105236A0000 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				A1000005236A0004 /* FileWatcherService.swift */,
+				A1000006236A0005 /* ScreenshotMoverService.swift */,
+				A1000007236A0006 /* NotificationService.swift */,
+				A1000008236A0007 /* LaunchAtLoginService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		A1000106236A0000 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A100000A236A0009 /* MenuBarView.swift */,
+				A100000B236A000A /* PreferencesWindow.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A1000107236A0000 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				A1000009236A0008 /* FileValidator.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A1000200236A0000 /* SnapSort */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1000300236A0000 /* Build configuration list for PBXNativeTarget "SnapSort" */;
+			buildPhases = (
+				A10000E0236A0000 /* Sources */,
+				A10000F0236A0000 /* Frameworks */,
+				A1000400236A0000 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SnapSort;
+			productName = SnapSort;
+			productReference = A1000000236A0000 /* SnapSort.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A1000500236A0000 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					A1000200236A0000 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = A1000600236A0000 /* Build configuration list for PBXProject "SnapSort" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A1000100236A0000;
+			productRefGroup = A1000102236A0000 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A1000200236A0000 /* SnapSort */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A1000400236A0000 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A10000E0236A0000 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000001236A0001 /* SnapSortApp.swift in Sources */,
+				A1000002236A0002 /* AppDelegate.swift in Sources */,
+				A1000003236A0003 /* AppSettings.swift in Sources */,
+				A1000004236A0004 /* MovedFile.swift in Sources */,
+				A1000005236A0005 /* FileWatcherService.swift in Sources */,
+				A1000006236A0006 /* ScreenshotMoverService.swift in Sources */,
+				A1000007236A0007 /* NotificationService.swift in Sources */,
+				A1000008236A0008 /* LaunchAtLoginService.swift in Sources */,
+				A1000009236A0009 /* FileValidator.swift in Sources */,
+				A100000A236A000A /* MenuBarView.swift in Sources */,
+				A100000B236A000B /* PreferencesWindow.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A1000700236A0000 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A1000701236A0000 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		A1000702236A0000 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = SnapSort/SnapSort.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SnapSort/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SnapSort;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2024 SnapSort. All rights reserved.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.snapsort.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A1000703236A0000 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = SnapSort/SnapSort.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SnapSort/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SnapSort;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2024 SnapSort. All rights reserved.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.snapsort.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A1000300236A0000 /* Build configuration list for PBXNativeTarget "SnapSort" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1000702236A0000 /* Debug */,
+				A1000703236A0000 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A1000600236A0000 /* Build configuration list for PBXProject "SnapSort" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1000700236A0000 /* Debug */,
+				A1000701236A0000 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A1000500236A0000 /* Project object */;
+}
