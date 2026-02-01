@@ -43,24 +43,30 @@ SnapSort is a macOS menu bar app that automatically organizes screenshots. This 
 
 ---
 
-### Phase 2: Intelligent Sorting
-**Target: v1.2**
+### Phase 2: Intelligent Sorting ✅
+**Target: v1.2** - COMPLETE
 
-#### 2.1 App Detection
-- [ ] Detect frontmost app when screenshot is taken
-- [ ] Create app-named subfolders: `Screenshots/Safari/`, `Screenshots/Xcode/`
-- [ ] Use Accessibility APIs or NSWorkspace
-- [ ] Whitelist/blacklist apps
-- [ ] Combine with date folders option
+#### 2.1 App Detection ✅
+- [x] Detect frontmost app when screenshot is taken
+- [x] Create app-named subfolders: `Screenshots/Safari/`, `Screenshots/Xcode/`
+- [x] Use NSWorkspace.shared.frontmostApplication
+- [x] Whitelist/blacklist apps (default: Finder, SnapSort excluded)
+- [x] Combine with date folders option
 
-#### 2.2 Size/Type Sorting
-- [ ] Detect screenshot type:
-  - Full screen capture
-  - Partial/selection capture
-  - Window capture
-  - Screen recording
-- [ ] Sort into type-based folders
-- [ ] Size threshold settings
+#### 2.2 Size/Type Sorting ✅
+- [x] Detect screenshot type:
+  - Full screen capture (matches screen dimensions)
+  - Partial/selection capture (default)
+  - Window capture (has alpha channel/shadow)
+  - Screen recording (.mov files)
+- [x] Sort into type-based folders (Full Screen/, Selections/, Windows/, Recordings/)
+- [x] Combine with app and date folders
+
+#### 2.3 Metadata Persistence ✅ (v1.3)
+- [x] Store app name, type, date in PNG metadata
+- [x] Auto-reorganize when sorting settings toggle off/on
+- [x] Reset macOS settings to defaults on app quit
+- [x] Process Desktop screenshots on app startup
 
 ---
 
@@ -168,13 +174,17 @@ Screenshot.swift       - Screenshot metadata model
 
 ### Services
 ```
-FileWatcherService.swift      - FSEvents monitoring
-ScreenshotMoverService.swift  - File moving logic
-OrganizationService.swift     - Sorting/organizing logic
-OCRService.swift              - Vision framework text extraction
-CompressionService.swift      - Image compression
-CleanupService.swift          - Auto-delete old files
-AppDetectionService.swift     - Frontmost app detection
+FileWatcherService.swift       - FSEvents monitoring
+ScreenshotMoverService.swift   - File moving, reorganization logic
+AppDetectionService.swift      - Frontmost app detection ✅
+ScreenshotTypeService.swift    - Screenshot type detection ✅
+ImageMetadataService.swift     - PNG metadata read/write ✅
+NotificationService.swift      - User notifications ✅
+LaunchAtLoginService.swift     - SMAppService wrapper ✅
+OrganizationService.swift      - Sorting/organizing logic (planned)
+OCRService.swift               - Vision framework text extraction (planned)
+CompressionService.swift       - Image compression (planned)
+CleanupService.swift           - Auto-delete old files (planned)
 ```
 
 ### Views
@@ -212,12 +222,13 @@ HistoryView.swift         - Screenshot history browser
 |---------|----------|--------|
 | v1.0 | Base app | ✅ Complete |
 | v1.1 | Date folders, Smart rename | ✅ Complete |
-| v1.2 | App detection, Size sorting | Week 3-4 |
-| v1.3 | Auto-cleanup, Duplicates | Week 5-6 |
-| v1.4 | Projects, Tagging | Week 7-8 |
-| v1.5 | OCR, Categorization | Week 9-10 |
-| v1.6 | Compression, Batch | Week 11-12 |
-| v2.0 | Cloud, History, Hotkeys | Week 13-16 |
+| v1.2 | App detection, Type sorting | ✅ Complete |
+| v1.3 | Metadata persistence, Reset on quit | ✅ Complete |
+| v1.4 | Auto-cleanup, Duplicates | TBD |
+| v1.5 | Projects, Tagging | TBD |
+| v1.6 | OCR, Categorization | TBD |
+| v1.7 | Compression, Batch | TBD |
+| v2.0 | Cloud, History, Hotkeys | TBD |
 
 ---
 
