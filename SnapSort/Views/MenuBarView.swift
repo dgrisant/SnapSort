@@ -69,8 +69,10 @@ struct MenuBarView: View {
         // Phase 2: Intelligent Sorting
         Toggle("Sort by App", isOn: $appSettings.appSortingEnabled)
 
-        if appSettings.appSortingEnabled {
-            Text("Screenshots sorted into app folders")
+        Toggle("Sort by Type", isOn: $appSettings.typeSortingEnabled)
+
+        if appSettings.appSortingEnabled || appSettings.typeSortingEnabled {
+            Text(getSortingDescription())
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -99,6 +101,17 @@ struct MenuBarView: View {
             NSApplication.shared.terminate(nil)
         }
         .keyboardShortcut("q", modifiers: .command)
+    }
+
+    private func getSortingDescription() -> String {
+        var parts: [String] = []
+        if appSettings.appSortingEnabled {
+            parts.append("app")
+        }
+        if appSettings.typeSortingEnabled {
+            parts.append("type")
+        }
+        return "Sorting by: \(parts.joined(separator: ", "))"
     }
 }
 

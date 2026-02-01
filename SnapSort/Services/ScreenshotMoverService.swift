@@ -392,7 +392,11 @@ class ScreenshotMoverService: ObservableObject {
         let delay: Double = AppSettings.shared.quickMoveEnabled ? 1.0 : 4.0
 
         processingQueue.asyncAfter(deadline: .now() + delay) { [weak self] in
-            self?.moveFile(at: url, appName: capturedAppName)
+            // Detect screenshot type
+            let screenshotType = ScreenshotTypeService.shared.detectType(at: url)
+            NSLog("[SnapSort] Detected type: %@ for %@", screenshotType.rawValue, filename)
+
+            self?.moveFile(at: url, appName: capturedAppName, screenshotType: screenshotType)
             self?.pendingFiles.remove(filename)
         }
     }
@@ -418,7 +422,7 @@ class ScreenshotMoverService: ObservableObject {
         return size1 == size2 && size1 > 0
     }
 
-    private func moveFile(at sourceURL: URL, appName: String? = nil) {
+    private func moveFile(at sourceURL: URL, appName: String? = nil, screenshotType: ScreenshotType? = nil) {
         let settings = AppSettings.shared
         let fileManager = FileManager.default
         let now = Date()
@@ -439,8 +443,8 @@ class ScreenshotMoverService: ObservableObject {
             fileDate = now
         }
 
-        // Get destination folder with date-based and app-based organization
-        guard let destinationFolder = settings.getDestinationFolder(for: fileDate, appName: appName) else {
+        // Get destination folder with date-based, app-based, and type-based organization
+        guard let destinationFolder = settings.getDestinationFolder(for: fileDate, appName: appName, screenshotType: screenshotType) else {
             NSLog("[SnapSort] Failed to get destination folder for %@", originalFilename)
             return
         }

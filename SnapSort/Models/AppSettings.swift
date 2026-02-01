@@ -404,8 +404,8 @@ class AppSettings: ObservableObject {
         }
     }
 
-    /// Gets the full destination path including date-based and app-based subfolders
-    func getDestinationFolder(for date: Date = Date(), appName: String? = nil) -> URL? {
+    /// Gets the full destination path including date-based, app-based, and type-based subfolders
+    func getDestinationFolder(for date: Date = Date(), appName: String? = nil, screenshotType: ScreenshotType? = nil) -> URL? {
         guard let baseURL = destinationFolderURL else { return nil }
 
         var fullPath = baseURL
@@ -416,6 +416,11 @@ class AppSettings: ObservableObject {
             if !sanitizedApp.isEmpty {
                 fullPath = fullPath.appendingPathComponent(sanitizedApp)
             }
+        }
+
+        // Add type subfolder if type sorting is enabled
+        if typeSortingEnabled, let type = screenshotType, type != .unknown {
+            fullPath = fullPath.appendingPathComponent(type.folderName)
         }
 
         // Add date-based subfolder
