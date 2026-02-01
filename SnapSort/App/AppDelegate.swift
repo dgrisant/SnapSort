@@ -15,6 +15,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         // Stop file watching
         ScreenshotMoverService.shared.stopWatching()
+
+        // Reset macOS screenshot settings to defaults
+        AppSettings.shared.resetToDefaultMacOSSettings()
     }
 
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
