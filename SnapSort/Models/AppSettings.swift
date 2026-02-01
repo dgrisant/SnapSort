@@ -381,9 +381,13 @@ class AppSettings: ObservableObject {
         if let desktop = fileManager.urls(for: .desktopDirectory, in: .userDomainMask).first {
             let desktopScreenshots = desktop.appendingPathComponent("Screenshots")
             if fileManager.fileExists(atPath: desktopScreenshots.path) {
-                // Check if this folder has recent screenshots
+                // Check if this folder has screenshot files (any of our known prefixes)
                 if let contents = try? fileManager.contentsOfDirectory(atPath: desktopScreenshots.path),
-                   contents.contains(where: { $0.hasPrefix("Screenshot") }) {
+                   contents.contains(where: { name in
+                       name.hasPrefix("Screenshot") || name.hasPrefix("Screen Shot") ||
+                       name.hasPrefix("Screen Recording") || name.hasPrefix("mac_") ||
+                       name.hasSuffix(".png") || name.hasSuffix(".jpg")
+                   }) {
                     return desktopScreenshots
                 }
             }

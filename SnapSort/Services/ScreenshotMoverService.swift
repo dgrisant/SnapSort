@@ -19,8 +19,12 @@ class ScreenshotMoverService: ObservableObject {
         let settings = AppSettings.shared
         guard settings.isConfigured,
               let watchURL = settings.watchFolderURL else {
+            NSLog("[SnapSort] Cannot start watching - not configured or no watch URL")
             return
         }
+
+        NSLog("[SnapSort] Starting to watch: %@", watchURL.path)
+        NSLog("[SnapSort] Destination folder: %@", settings.destinationFolderURL?.path ?? "nil")
 
         // Start accessing security-scoped resources
         _ = settings.startAccessingWatchFolder()
@@ -156,7 +160,12 @@ class ScreenshotMoverService: ObservableObject {
     }
 
     private func processExistingFiles() {
-        guard let watchURL = AppSettings.shared.watchFolderURL else { return }
+        guard let watchURL = AppSettings.shared.watchFolderURL else {
+            NSLog("[SnapSort] processExistingFiles: no watch URL")
+            return
+        }
+
+        NSLog("[SnapSort] Processing existing files in: %@", watchURL.path)
 
         processingQueue.async { [weak self] in
             let fileManager = FileManager.default
@@ -164,32 +173,73 @@ class ScreenshotMoverService: ObservableObject {
                 at: watchURL,
                 includingPropertiesForKeys: [.isRegularFileKey, .creationDateKey],
                 options: [.skipsHiddenFiles]
-            ) else { return }
+            ) else {
+                NSLog("[SnapSort] Failed to read directory contents")
+                return
+            }
 
+            NSLog("[SnapSort] Found %d items in watch folder", contents.count)
             for fileURL in contents {
                 self?.processFile(at: fileURL)
             }
         }
     }
 
-    private func processFile(at url: URL) {
+    private func processFile(at url: URL, retryCount: Int = 0) {
         let filename = url.lastPathComponent
+        let maxRetries = 3
 
         // Skip if already being processed
-        guard !pendingFiles.contains(filename) else { return }
+        guard !pendingFiles.contains(filename) else {
+            print("[SnapSort] Skipping \(filename) - already being processed")
+            return
+        }
 
         // Check if file matches our prefixes
-        guard AppSettings.shared.matchesPrefix(filename) else { return }
+        guard AppSettings.shared.matchesPrefix(filename) else {
+            print("[SnapSort] Skipping \(filename) - doesn't match prefixes")
+            return
+        }
+
+        // Check if file exists
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            print("[SnapSort] Skipping \(filename) - file doesn't exist")
+            return
+        }
+
+        // Wait for file to be stable (not being written)
+        guard isFileStable(at: url) else {
+            if retryCount < maxRetries {
+                print("[SnapSort] File \(filename) not stable yet, retry \(retryCount + 1)/\(maxRetries)")
+                processingQueue.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                    self?.processFile(at: url, retryCount: retryCount + 1)
+                }
+            } else {
+                print("[SnapSort] File \(filename) never became stable, giving up")
+            }
+            return
+        }
 
         // Validate it's an image
-        guard FileValidator.isValidImage(at: url) else { return }
+        guard FileValidator.isValidImage(at: url) else {
+            if retryCount < maxRetries {
+                print("[SnapSort] File \(filename) failed validation, retry \(retryCount + 1)/\(maxRetries)")
+                processingQueue.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                    self?.processFile(at: url, retryCount: retryCount + 1)
+                }
+            } else {
+                print("[SnapSort] File \(filename) failed validation after \(maxRetries) retries")
+            }
+            return
+        }
 
         pendingFiles.insert(filename)
+        print("[SnapSort] Processing \(filename)")
 
         // Delay before moving:
-        // - Quick mode: 0.5s (moves before preview dismisses)
+        // - Quick mode: 1.0s (moves before preview dismisses, but after file is written)
         // - Normal mode: 4s (waits for macOS preview to dismiss)
-        let delay: Double = AppSettings.shared.quickMoveEnabled ? 0.5 : 4.0
+        let delay: Double = AppSettings.shared.quickMoveEnabled ? 1.0 : 4.0
 
         processingQueue.asyncAfter(deadline: .now() + delay) { [weak self] in
             self?.moveFile(at: url)
@@ -197,10 +247,38 @@ class ScreenshotMoverService: ObservableObject {
         }
     }
 
+    /// Checks if a file has finished being written by comparing sizes over time
+    private func isFileStable(at url: URL) -> Bool {
+        let fileManager = FileManager.default
+
+        guard let attrs1 = try? fileManager.attributesOfItem(atPath: url.path),
+              let size1 = attrs1[.size] as? Int64 else {
+            return false
+        }
+
+        // Wait a bit and check again
+        Thread.sleep(forTimeInterval: 0.2)
+
+        guard let attrs2 = try? fileManager.attributesOfItem(atPath: url.path),
+              let size2 = attrs2[.size] as? Int64 else {
+            return false
+        }
+
+        // File is stable if size hasn't changed and is > 0
+        return size1 == size2 && size1 > 0
+    }
+
     private func moveFile(at sourceURL: URL) {
         let settings = AppSettings.shared
         let fileManager = FileManager.default
         let now = Date()
+        let originalFilename = sourceURL.lastPathComponent
+
+        // Verify source file still exists
+        guard fileManager.fileExists(atPath: sourceURL.path) else {
+            print("[SnapSort] Source file no longer exists: \(originalFilename)")
+            return
+        }
 
         // Get file creation date for organization (or use current date)
         let fileDate: Date
@@ -212,9 +290,10 @@ class ScreenshotMoverService: ObservableObject {
         }
 
         // Get destination folder with date-based organization
-        guard let destinationFolder = settings.getDestinationFolder(for: fileDate) else { return }
-
-        let originalFilename = sourceURL.lastPathComponent
+        guard let destinationFolder = settings.getDestinationFolder(for: fileDate) else {
+            print("[SnapSort] Failed to get destination folder for \(originalFilename)")
+            return
+        }
 
         // Generate new filename based on naming format
         var newFilename = settings.generateFilename(for: originalFilename, date: fileDate)
@@ -233,6 +312,7 @@ class ScreenshotMoverService: ObservableObject {
 
         do {
             try fileManager.moveItem(at: sourceURL, to: destinationURL)
+            print("[SnapSort] Moved: \(originalFilename) → \(destinationFolder.lastPathComponent)/\(newFilename)")
 
             DispatchQueue.main.async { [weak self] in
                 self?.movedCount += 1
@@ -250,7 +330,7 @@ class ScreenshotMoverService: ObservableObject {
                 }
             }
         } catch {
-            print("Failed to move file: \(error)")
+            print("[SnapSort] Failed to move \(originalFilename): \(error.localizedDescription)")
         }
     }
 }
