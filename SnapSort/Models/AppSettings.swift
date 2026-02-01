@@ -197,6 +197,13 @@ class AppSettings: ObservableObject {
     @Published var appSortingEnabled: Bool {
         didSet {
             defaults.set(appSortingEnabled, forKey: Keys.appSortingEnabled)
+            // Trigger reorganization when setting changes
+            if oldValue != appSortingEnabled {
+                NSLog("[SnapSort] App sorting changed to %@, reorganizing...", appSortingEnabled ? "enabled" : "disabled")
+                ScreenshotMoverService.shared.reorganizeAllFiles { count in
+                    NSLog("[SnapSort] Reorganized %d files after app sorting change", count)
+                }
+            }
         }
     }
 
@@ -209,6 +216,13 @@ class AppSettings: ObservableObject {
     @Published var typeSortingEnabled: Bool {
         didSet {
             defaults.set(typeSortingEnabled, forKey: Keys.typeSortingEnabled)
+            // Trigger reorganization when setting changes
+            if oldValue != typeSortingEnabled {
+                NSLog("[SnapSort] Type sorting changed to %@, reorganizing...", typeSortingEnabled ? "enabled" : "disabled")
+                ScreenshotMoverService.shared.reorganizeAllFiles { count in
+                    NSLog("[SnapSort] Reorganized %d files after type sorting change", count)
+                }
+            }
         }
     }
 

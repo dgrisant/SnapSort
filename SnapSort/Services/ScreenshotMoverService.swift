@@ -179,7 +179,8 @@ class ScreenshotMoverService: ObservableObject {
         }
     }
 
-    /// Reorganizes ALL screenshots (including those in subfolders) when folder organization changes
+    /// Reorganizes ALL screenshots (including those in subfolders) when folder organization or sorting settings change
+    /// Uses PNG metadata when available for accurate app/type determination
     func reorganizeAllFiles(completion: @escaping (Int) -> Void) {
         let settings = AppSettings.shared
         guard let destinationURL = settings.destinationFolderURL else {
@@ -201,7 +202,8 @@ class ScreenshotMoverService: ObservableObject {
                 return
             }
 
-            var filesToMove: [(URL, Date)] = []
+            // Collect files with their metadata
+            var filesToMove: [(url: URL, metadata: ScreenshotMetadata?, fileDate: Date)] = []
 
             for case let fileURL as URL in enumerator {
                 // Skip directories
@@ -213,31 +215,66 @@ class ScreenshotMoverService: ObservableObject {
                 // Only process image files
                 guard FileValidator.isValidImage(at: fileURL) else { continue }
 
-                // Get file creation date
+                // Try to read SnapSort metadata from PNG
+                let metadata = ImageMetadataService.shared.readMetadata(from: fileURL)
+
+                // Get file date from metadata or filesystem
                 let fileDate: Date
-                if let attributes = try? fileManager.attributesOfItem(atPath: fileURL.path),
-                   let creationDate = attributes[.creationDate] as? Date {
+                if let meta = metadata {
+                    fileDate = meta.captureDate
+                } else if let attributes = try? fileManager.attributesOfItem(atPath: fileURL.path),
+                          let creationDate = attributes[.creationDate] as? Date {
                     fileDate = creationDate
                 } else {
                     fileDate = Date()
                 }
 
-                // Get proper destination folder for this file
-                guard let properFolder = settings.getDestinationFolder(for: fileDate) else { continue }
+                // Determine app name and type based on current settings and metadata
+                let appName: String?
+                let screenshotType: ScreenshotType?
+
+                if let meta = metadata {
+                    // Use metadata values if sorting is enabled, nil otherwise
+                    appName = settings.appSortingEnabled ? meta.appName : nil
+                    screenshotType = settings.typeSortingEnabled ?
+                        meta.screenshotType.flatMap { ScreenshotType(rawValue: $0) } : nil
+                } else {
+                    // No metadata - try to infer from folder structure (legacy files)
+                    appName = settings.appSortingEnabled ?
+                        self.inferAppNameFromPath(fileURL, baseURL: destinationURL) : nil
+                    screenshotType = settings.typeSortingEnabled ?
+                        self.inferTypeFromPath(fileURL, baseURL: destinationURL) : nil
+                }
+
+                // Get proper destination folder
+                guard let properFolder = settings.getDestinationFolder(
+                    for: fileDate,
+                    appName: appName,
+                    screenshotType: screenshotType
+                ) else { continue }
 
                 // Skip if already in the correct folder
                 if fileURL.deletingLastPathComponent().path == properFolder.path {
                     continue
                 }
 
-                filesToMove.append((fileURL, fileDate))
+                filesToMove.append((fileURL, metadata, fileDate))
             }
 
             NSLog("[SnapSort] Found %d files to reorganize", filesToMove.count)
 
             // Move files to correct locations
-            for (fileURL, fileDate) in filesToMove {
-                guard let properFolder = settings.getDestinationFolder(for: fileDate) else { continue }
+            for (fileURL, metadata, fileDate) in filesToMove {
+                // Recalculate destination with current settings
+                let appName = settings.appSortingEnabled ? metadata?.appName : nil
+                let screenshotType = settings.typeSortingEnabled ?
+                    metadata?.screenshotType.flatMap { ScreenshotType(rawValue: $0) } : nil
+
+                guard let properFolder = settings.getDestinationFolder(
+                    for: fileDate,
+                    appName: appName,
+                    screenshotType: screenshotType
+                ) else { continue }
 
                 let originalFilename = fileURL.lastPathComponent
                 var newFilename = originalFilename  // Keep existing name (already renamed)
@@ -278,6 +315,59 @@ class ScreenshotMoverService: ObservableObject {
                 completion(reorganizedCount)
             }
         }
+    }
+
+    // MARK: - Legacy Support Helpers
+
+    /// Attempts to infer app name from folder path for files without metadata
+    private func inferAppNameFromPath(_ fileURL: URL, baseURL: URL) -> String? {
+        let relativePath = fileURL.path.replacingOccurrences(of: baseURL.path + "/", with: "")
+        let components = relativePath.components(separatedBy: "/")
+
+        // First non-date-like, non-type component is likely the app name
+        for component in components {
+            if !isDateFolder(component) && !isTypeFolder(component) && component != fileURL.lastPathComponent {
+                return component
+            }
+        }
+        return nil
+    }
+
+    /// Attempts to infer screenshot type from folder path
+    private func inferTypeFromPath(_ fileURL: URL, baseURL: URL) -> ScreenshotType? {
+        let relativePath = fileURL.path.replacingOccurrences(of: baseURL.path + "/", with: "")
+        let components = relativePath.components(separatedBy: "/")
+
+        for component in components {
+            for type in ScreenshotType.allCases {
+                if component == type.folderName {
+                    return type
+                }
+            }
+        }
+        return nil
+    }
+
+    /// Checks if a folder name looks like a date folder
+    private func isDateFolder(_ name: String) -> Bool {
+        // Match patterns like "2026", "02", "01", "2026-02-01"
+        let datePatterns = [
+            "^\\d{4}$",              // Year: 2026
+            "^\\d{2}$",              // Month/Day: 02
+            "^\\d{4}-\\d{2}-\\d{2}$" // Full date: 2026-02-01
+        ]
+
+        for pattern in datePatterns {
+            if name.range(of: pattern, options: .regularExpression) != nil {
+                return true
+            }
+        }
+        return false
+    }
+
+    /// Checks if a folder name is a screenshot type folder
+    private func isTypeFolder(_ name: String) -> Bool {
+        return ScreenshotType.allCases.contains { $0.folderName == name }
     }
 
     /// Removes empty directories after reorganization
@@ -467,6 +557,19 @@ class ScreenshotMoverService: ObservableObject {
         do {
             try fileManager.moveItem(at: sourceURL, to: destinationURL)
             NSLog("[SnapSort] SUCCESS Moved: %@ → %@/%@", originalFilename, destinationFolder.lastPathComponent, newFilename)
+
+            // Write metadata to the moved file (background, non-blocking)
+            let metadata = ScreenshotMetadata(
+                appName: appName,
+                screenshotType: screenshotType?.rawValue,
+                captureDate: fileDate
+            )
+            processingQueue.async {
+                let success = ImageMetadataService.shared.writeMetadata(metadata, to: destinationURL)
+                if !success {
+                    NSLog("[SnapSort] Warning: Failed to write metadata to %@", newFilename)
+                }
+            }
 
             DispatchQueue.main.async { [weak self] in
                 self?.movedCount += 1
