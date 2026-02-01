@@ -240,6 +240,26 @@ class AppSettings: ObservableObject {
         task.waitUntilExit()
     }
 
+    /// Resets macOS screenshot settings to defaults when app quits
+    func resetToDefaultMacOSSettings() {
+        NSLog("[SnapSort] Resetting macOS screenshot settings to defaults")
+
+        // Reset screenshot location to Desktop
+        let resetLocation = Process()
+        resetLocation.launchPath = "/bin/sh"
+        resetLocation.arguments = ["-c", "defaults delete com.apple.screencapture location 2>/dev/null || true; killall SystemUIServer 2>/dev/null || true"]
+        resetLocation.launch()
+        resetLocation.waitUntilExit()
+
+        // Reset thumbnail preview to enabled (default)
+        let resetThumbnail = Process()
+        resetThumbnail.launchPath = "/bin/sh"
+        resetThumbnail.arguments = ["-c", "defaults delete com.apple.screencapture show-thumbnail 2>/dev/null || true"]
+        resetThumbnail.launch()
+        resetThumbnail.waitUntilExit()
+
+        NSLog("[SnapSort] macOS screenshot settings reset to defaults")
+    }
 
     // MARK: - Initialization
     private init() {
