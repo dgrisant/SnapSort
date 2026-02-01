@@ -190,18 +190,6 @@ class AppSettings: ObservableObject {
         task.waitUntilExit()
     }
 
-    /// Configures macOS to save screenshots directly to our destination folder
-    private func configureScreenshotLocation() {
-        guard let destination = destinationFolderURL else { return }
-
-        let task = Process()
-        task.launchPath = "/bin/sh"
-        task.arguments = ["-c", "defaults write com.apple.screencapture location '\(destination.path)' && killall SystemUIServer 2>/dev/null || true"]
-        task.launch()
-        task.waitUntilExit()
-
-        NSLog("[SnapSort] Configured macOS screenshot location to: %@", destination.path)
-    }
 
     // MARK: - Initialization
     private init() {
@@ -256,6 +244,19 @@ class AppSettings: ObservableObject {
             // Watch the same folder where screenshots are saved
             watchFolderURL = destinationFolderURL
         }
+    }
+
+    /// Configures macOS to save screenshots directly to our destination folder
+    private func configureScreenshotLocation() {
+        guard let destination = destinationFolderURL else { return }
+
+        let task = Process()
+        task.launchPath = "/bin/sh"
+        task.arguments = ["-c", "defaults write com.apple.screencapture location '\(destination.path)' && killall SystemUIServer 2>/dev/null || true"]
+        task.launch()
+        task.waitUntilExit()
+
+        NSLog("[SnapSort] Configured macOS screenshot location to: %@", destination.path)
     }
 
     private func setupDefaultDestination() {

@@ -7,7 +7,7 @@ class ScreenshotMoverService: ObservableObject {
     @Published var isWatching = false
     @Published var movedCount = 0
 
-    private var fileWatcher: FileWatcherService?
+    private var fileWatchers: [FileWatcherService] = []
     private var pendingFiles: Set<String> = []
     private let processingQueue = DispatchQueue(label: "com.snapsort.processing")
 
@@ -17,34 +17,54 @@ class ScreenshotMoverService: ObservableObject {
         guard !isWatching else { return }
 
         let settings = AppSettings.shared
-        guard settings.isConfigured,
-              let watchURL = settings.watchFolderURL else {
-            NSLog("[SnapSort] Cannot start watching - not configured or no watch URL")
+        guard settings.isConfigured else {
+            NSLog("[SnapSort] Cannot start watching - not configured")
             return
         }
-
-        NSLog("[SnapSort] Starting to watch: %@", watchURL.path)
-        NSLog("[SnapSort] Destination folder: %@", settings.destinationFolderURL?.path ?? "nil")
 
         // Start accessing security-scoped resources
         _ = settings.startAccessingWatchFolder()
         _ = settings.startAccessingDestinationFolder()
 
-        fileWatcher = FileWatcherService(path: watchURL.path)
-        fileWatcher?.delegate = self
-        fileWatcher?.start()
+        // Build list of folders to watch
+        var foldersToWatch: [URL] = []
+
+        // Always watch the destination folder (where macOS should save screenshots)
+        if let destURL = settings.destinationFolderURL {
+            foldersToWatch.append(destURL)
+        }
+
+        // Also watch Desktop as fallback (Cmd+Shift+5 sometimes ignores the location setting)
+        if let desktopURL = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first {
+            if !foldersToWatch.contains(desktopURL) {
+                foldersToWatch.append(desktopURL)
+            }
+        }
+
+        // Watch each folder
+        for folderURL in foldersToWatch {
+            NSLog("[SnapSort] Starting to watch: %@", folderURL.path)
+            let watcher = FileWatcherService(path: folderURL.path)
+            watcher.delegate = self
+            watcher.start()
+            fileWatchers.append(watcher)
+        }
+
+        NSLog("[SnapSort] Destination folder: %@", settings.destinationFolderURL?.path ?? "nil")
 
         DispatchQueue.main.async {
             self.isWatching = true
         }
 
-        // Process any existing files that match
-        processExistingFiles()
+        // Process any existing files that match in all watched folders
+        processExistingFiles(in: foldersToWatch)
     }
 
     func stopWatching() {
-        fileWatcher?.stop()
-        fileWatcher = nil
+        for watcher in fileWatchers {
+            watcher.stop()
+        }
+        fileWatchers.removeAll()
 
         let settings = AppSettings.shared
         settings.stopAccessingWatchFolder()
@@ -159,28 +179,26 @@ class ScreenshotMoverService: ObservableObject {
         }
     }
 
-    private func processExistingFiles() {
-        guard let watchURL = AppSettings.shared.watchFolderURL else {
-            NSLog("[SnapSort] processExistingFiles: no watch URL")
-            return
-        }
-
-        NSLog("[SnapSort] Processing existing files in: %@", watchURL.path)
-
+    private func processExistingFiles(in folders: [URL]) {
         processingQueue.async { [weak self] in
             let fileManager = FileManager.default
-            guard let contents = try? fileManager.contentsOfDirectory(
-                at: watchURL,
-                includingPropertiesForKeys: [.isRegularFileKey, .creationDateKey],
-                options: [.skipsHiddenFiles]
-            ) else {
-                NSLog("[SnapSort] Failed to read directory contents")
-                return
-            }
 
-            NSLog("[SnapSort] Found %d items in watch folder", contents.count)
-            for fileURL in contents {
-                self?.processFile(at: fileURL)
+            for watchURL in folders {
+                NSLog("[SnapSort] Processing existing files in: %@", watchURL.path)
+
+                guard let contents = try? fileManager.contentsOfDirectory(
+                    at: watchURL,
+                    includingPropertiesForKeys: [.isRegularFileKey, .creationDateKey],
+                    options: [.skipsHiddenFiles]
+                ) else {
+                    NSLog("[SnapSort] Failed to read directory contents for %@", watchURL.path)
+                    continue
+                }
+
+                NSLog("[SnapSort] Found %d items in %@", contents.count, watchURL.lastPathComponent)
+                for fileURL in contents {
+                    self?.processFile(at: fileURL)
+                }
             }
         }
     }
