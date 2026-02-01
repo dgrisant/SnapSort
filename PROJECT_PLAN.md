@@ -19,27 +19,27 @@ SnapSort is a macOS menu bar app that automatically organizes screenshots. This 
 
 ## Planned Features
 
-### Phase 1: Core Organization
-**Target: v1.1**
+### Phase 1: Core Organization ✅
+**Target: v1.1** - COMPLETE
 
-#### 1.1 Date-Based Folders
-- [ ] Organize screenshots into date-based folder structure
-- [ ] Options:
+#### 1.1 Date-Based Folders ✅
+- [x] Organize screenshots into date-based folder structure
+- [x] Options:
   - `Year/Month/Day` (e.g., `2026/02/01/`)
   - `Year/Month` (e.g., `2026/02/`)
   - `Year-Month-Day` flat (e.g., `2026-02-01/`)
   - Flat (no subfolders) - current behavior
-- [ ] Add setting to menu/preferences
-- [ ] Migrate existing files option
+- [x] Add setting to menu/preferences
+- [x] Migrate existing files option ("Reorganize Existing Files" button)
 
-#### 1.2 Smart Rename
-- [ ] Replace verbose macOS naming with cleaner format
-- [ ] Naming options:
+#### 1.2 Smart Rename ✅
+- [x] Replace verbose macOS naming with cleaner format
+- [x] Naming options:
   - Compact: `2026-02-01_094532.png`
   - Sequential: `Screenshot_001.png`
   - Custom prefix: `{prefix}_{date}_{time}.png`
-- [ ] Preserve original name option
-- [ ] Collision handling (append number)
+- [x] Preserve original name option
+- [x] Collision handling (append number)
 
 ---
 
@@ -211,7 +211,7 @@ HistoryView.swift         - Screenshot history browser
 | Version | Features | Target |
 |---------|----------|--------|
 | v1.0 | Base app | ✅ Complete |
-| v1.1 | Date folders, Smart rename | Week 1-2 |
+| v1.1 | Date folders, Smart rename | ✅ Complete |
 | v1.2 | App detection, Size sorting | Week 3-4 |
 | v1.3 | Auto-cleanup, Duplicates | Week 5-6 |
 | v1.4 | Projects, Tagging | Week 7-8 |
