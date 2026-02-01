@@ -160,6 +160,13 @@ class AppSettings: ObservableObject {
     @Published var folderOrganization: FolderOrganization {
         didSet {
             defaults.set(folderOrganization.rawValue, forKey: Keys.folderOrganization)
+            // Auto-reorganize existing files when setting changes
+            if oldValue != folderOrganization {
+                NSLog("[SnapSort] Folder organization changed from %@ to %@, reorganizing files...", oldValue.rawValue, folderOrganization.rawValue)
+                ScreenshotMoverService.shared.reorganizeAllFiles { count in
+                    NSLog("[SnapSort] Reorganized %d files to new folder structure", count)
+                }
+            }
         }
     }
 

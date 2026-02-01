@@ -179,6 +179,135 @@ class ScreenshotMoverService: ObservableObject {
         }
     }
 
+    /// Reorganizes ALL screenshots (including those in subfolders) when folder organization changes
+    func reorganizeAllFiles(completion: @escaping (Int) -> Void) {
+        let settings = AppSettings.shared
+        guard let destinationURL = settings.destinationFolderURL else {
+            completion(0)
+            return
+        }
+
+        processingQueue.async {
+            let fileManager = FileManager.default
+            var reorganizedCount = 0
+
+            // Find all image files recursively
+            guard let enumerator = fileManager.enumerator(
+                at: destinationURL,
+                includingPropertiesForKeys: [.isRegularFileKey, .creationDateKey],
+                options: [.skipsHiddenFiles]
+            ) else {
+                DispatchQueue.main.async { completion(0) }
+                return
+            }
+
+            var filesToMove: [(URL, Date)] = []
+
+            for case let fileURL as URL in enumerator {
+                // Skip directories
+                guard let resourceValues = try? fileURL.resourceValues(forKeys: [.isRegularFileKey]),
+                      resourceValues.isRegularFile == true else {
+                    continue
+                }
+
+                // Only process image files
+                guard FileValidator.isValidImage(at: fileURL) else { continue }
+
+                // Get file creation date
+                let fileDate: Date
+                if let attributes = try? fileManager.attributesOfItem(atPath: fileURL.path),
+                   let creationDate = attributes[.creationDate] as? Date {
+                    fileDate = creationDate
+                } else {
+                    fileDate = Date()
+                }
+
+                // Get proper destination folder for this file
+                guard let properFolder = settings.getDestinationFolder(for: fileDate) else { continue }
+
+                // Skip if already in the correct folder
+                if fileURL.deletingLastPathComponent().path == properFolder.path {
+                    continue
+                }
+
+                filesToMove.append((fileURL, fileDate))
+            }
+
+            NSLog("[SnapSort] Found %d files to reorganize", filesToMove.count)
+
+            // Move files to correct locations
+            for (fileURL, fileDate) in filesToMove {
+                guard let properFolder = settings.getDestinationFolder(for: fileDate) else { continue }
+
+                let originalFilename = fileURL.lastPathComponent
+                var newFilename = originalFilename  // Keep existing name (already renamed)
+                var newDestination = properFolder.appendingPathComponent(newFilename)
+
+                // Handle conflicts
+                var counter = 1
+                let nameWithoutExtension = (newFilename as NSString).deletingPathExtension
+                let fileExtension = (newFilename as NSString).pathExtension
+
+                while fileManager.fileExists(atPath: newDestination.path) {
+                    newFilename = "\(nameWithoutExtension)_\(counter).\(fileExtension)"
+                    newDestination = properFolder.appendingPathComponent(newFilename)
+                    counter += 1
+                }
+
+                do {
+                    try fileManager.moveItem(at: fileURL, to: newDestination)
+                    reorganizedCount += 1
+                    NSLog("[SnapSort] Moved: %@ → %@/%@", originalFilename, properFolder.lastPathComponent, newFilename)
+                } catch {
+                    NSLog("[SnapSort] Failed to move %@: %@", originalFilename, error.localizedDescription)
+                }
+            }
+
+            // Clean up empty directories
+            self.removeEmptyDirectories(in: destinationURL)
+
+            DispatchQueue.main.async {
+                if reorganizedCount > 0 {
+                    if settings.showNotifications {
+                        NotificationService.shared.sendNotification(
+                            title: "Screenshots Reorganized",
+                            body: "\(reorganizedCount) file\(reorganizedCount == 1 ? "" : "s") moved to new folder structure"
+                        )
+                    }
+                }
+                completion(reorganizedCount)
+            }
+        }
+    }
+
+    /// Removes empty directories after reorganization
+    private func removeEmptyDirectories(in directory: URL) {
+        let fileManager = FileManager.default
+
+        guard let contents = try? fileManager.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) else { return }
+
+        for item in contents {
+            guard let resourceValues = try? item.resourceValues(forKeys: [.isDirectoryKey]),
+                  resourceValues.isDirectory == true else {
+                continue
+            }
+
+            // Recursively clean subdirectories first
+            removeEmptyDirectories(in: item)
+
+            // Check if directory is now empty
+            if let subContents = try? fileManager.contentsOfDirectory(atPath: item.path),
+               subContents.isEmpty {
+                try? fileManager.removeItem(at: item)
+                NSLog("[SnapSort] Removed empty directory: %@", item.lastPathComponent)
+            }
+        }
+    }
+
     private func processExistingFiles(in folders: [URL]) {
         processingQueue.async { [weak self] in
             let fileManager = FileManager.default
