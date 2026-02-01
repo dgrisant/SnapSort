@@ -4,6 +4,54 @@
 
 ---
 
+## 🔄 Session State (READ THIS FIRST AFTER COMPACT)
+
+> **IMPORTANT:** After conversation compacting, Claude MUST re-read this file to restore context.
+
+### Last Updated: 2026-02-01 09:55 AM
+
+### Current Status
+- **Branch:** `dev`
+- **Version:** v1.0 (complete and working)
+- **App State:** Fully functional, running from Xcode DerivedData
+
+### What Was Just Completed
+- [x] Initial app implementation (all 11 Swift files)
+- [x] Fixed MenuBarExtra button click issues (switched to `.menu` style)
+- [x] Fixed Preferences window issues (removed, auto-configure instead)
+- [x] Added "Instant Move" feature (disables macOS thumbnail preview)
+- [x] Fixed shell command execution for toggling screenshot settings
+- [x] Created Git repo with main/prod/dev branches
+- [x] Pushed to GitHub: https://github.com/dgrisant/SnapSort
+- [x] Created PROJECT_PLAN.md with full feature roadmap
+- [x] Created this CLAUDE_FINDINGS.md file
+
+### What's Next
+- [ ] Phase 1.1: Date-Based Folders
+- [ ] Phase 1.1: Smart Rename
+- See PROJECT_PLAN.md for full roadmap
+
+### Active Issues
+- None currently
+
+### Key Files to Know
+| File | Purpose |
+|------|---------|
+| `SnapSort/App/SnapSortApp.swift` | Main entry, MenuBarExtra |
+| `SnapSort/Models/AppSettings.swift` | All settings, quickMoveEnabled |
+| `SnapSort/Services/ScreenshotMoverService.swift` | File watching & moving |
+| `SnapSort/Views/MenuBarView.swift` | Menu UI |
+| `PROJECT_PLAN.md` | Feature roadmap |
+
+### Build & Run
+```bash
+cd ~/Desktop/SnapSort
+xcodebuild -project SnapSort.xcodeproj -scheme SnapSort -configuration Debug build
+open ~/Library/Developer/Xcode/DerivedData/SnapSort-*/Build/Products/Debug/SnapSort.app
+```
+
+---
+
 ## Instructions for Claude
 
 ### When to Update This File
@@ -12,6 +60,7 @@
 3. **When making architectural changes** - Explain the why and how
 4. **When discovering macOS quirks** - Document for future reference
 5. **When a feature doesn't work as expected** - Document the issue and workaround
+6. **Before/after conversation compact** - Update Session State section
 
 ### Entry Format
 ```markdown
